@@ -1,0 +1,16 @@
+[package]
+name = "gwz-git"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "GPL-2.0-only"
+publish = false
+description = "Single-repository Git behavior for GWZ"
+
+[workspace]
+
+[dependencies]
+git2 = { path = "../git2-rs", version = "=0.21.0", default-features = false, features = ["unstable-sha256", "vendored-libgit2"] }
+
+[dev-dependencies]
+tempfile = "3"
