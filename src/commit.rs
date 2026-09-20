@@ -36,13 +36,24 @@ pub(crate) fn read(repository: &git2::Repository, id: ObjectId) -> Result<Commit
     let author = native_signature(native.author());
     let committer = native_signature(native.committer());
     let encoding = find_optional_header(headers, b"encoding ").map(ToOwned::to_owned);
-    let parents = native
-        .parent_ids()
-        .map(ObjectId::from_git2)
-        .collect::<Vec<_>>();
+    // Native lookup applies graft/shallow rewrites. The record describes stored
+    // object content, so read only the leading tree/parent header sequence.
+    let mut lines = headers.split(|byte| *byte == b'\n');
+    let tree = header_id(
+        lines
+            .next()
+            .unwrap_or_default()
+            .strip_prefix(b"tree ")
+            .unwrap_or_default(),
+        repository.object_format(),
+    )?;
+    let parents = lines
+        .take_while(|line| line.starts_with(b"parent "))
+        .map(|line| header_id(&line[7..], repository.object_format()))
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(CommitRecord {
         id,
-        tree: ObjectId::from_git2(native.tree_id()),
+        tree,
         parents,
         author,
         committer,
@@ -74,4 +85,12 @@ fn find_optional_header<'a>(headers: &'a [u8], prefix: &[u8]) -> Option<&'a [u8]
         }
     }
     None
+}
+
+fn header_id(bytes: &[u8], format: git2::ObjectFormat) -> Result<ObjectId, Error> {
+    let text = std::str::from_utf8(bytes)
+        .map_err(|error| Error::from_native(ErrorKind::ObjectRead, error.into()))?;
+    git2::Oid::from_str_ext(text, format)
+        .map(ObjectId::from_git2)
+        .map_err(|error| Error::from_native(ErrorKind::ObjectRead, error))
 }

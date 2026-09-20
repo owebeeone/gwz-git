@@ -9,14 +9,14 @@ pub enum ErrorKind {
     ObjectRead,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct NativeDiagnostic {
     pub code: i32,
     pub class: i32,
     pub message: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct Error {
     kind: ErrorKind,
     native: Option<NativeDiagnostic>,

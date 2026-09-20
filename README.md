@@ -43,7 +43,7 @@ CARGO_TARGET_DIR=/tmp/gwz-git-g0-target rustup run 1.95.0 \
 
 The current package is prepared-workspace-only and unpublished. It requires the
 qualified Rust fork at `../git2-rs` commit
-`4c1caabbce7d56426c763dd94114052302b23e4c` and vendored libgit2 1.9.7 source
+`ce78628308e11b4e8901d5061602619109bce21a` and vendored libgit2 1.9.7 source
 at `b172e3d187a4b6866fd9f696f40a1b8e7f56d348`. From `gwz-core`, the source
 qualification proof is:
 

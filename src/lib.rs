@@ -26,6 +26,28 @@
 //! fn main() { requires_clone::<gwz_git::Repository>(); }
 //! ```
 
+//! Error values intentionally do not promise cloning or equality.
+//!
+//! ```rust,compile_fail
+//! fn requires_clone<T: Clone>() {}
+//! requires_clone::<gwz_git::Error>();
+//! ```
+//!
+//! ```rust,compile_fail
+//! fn requires_eq<T: PartialEq>() {}
+//! requires_eq::<gwz_git::Error>();
+//! ```
+//!
+//! ```rust,compile_fail
+//! fn requires_clone<T: Clone>() {}
+//! requires_clone::<gwz_git::NativeDiagnostic>();
+//! ```
+//!
+//! ```rust,compile_fail
+//! fn requires_eq<T: PartialEq>() {}
+//! requires_eq::<gwz_git::NativeDiagnostic>();
+//! ```
+
 mod commit;
 mod error;
 mod object_id;

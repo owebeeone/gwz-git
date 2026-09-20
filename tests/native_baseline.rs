@@ -381,3 +381,87 @@ fn exact_open_accepts_a_linked_worktree_root() {
     assert!(repo.work_dir().is_some_and(|path| path.ends_with("linked")));
     assert_eq!(repo.object_format(), ObjectFormat::Sha1);
 }
+
+#[test]
+fn stored_parents_ignore_shallow_and_explicit_graft_rewrites() {
+    for format in [ObjectFormat::Sha1, ObjectFormat::Sha256] {
+        for shallow in [true, false] {
+            let temp = temp_dir("native-grafts");
+            let path = temp.path().join("repo");
+            let native = init_repo(&path, format);
+            let tree = tree(&native);
+            let first = seed_commit(&native);
+            let second = raw_commit(
+                &native,
+                tree,
+                &[],
+                b"A <a@invalid> 2 +0000",
+                b"C <c@invalid> 2 +0000",
+                None,
+                b"second",
+            );
+            let child = raw_commit(
+                &native,
+                tree,
+                &[first, second],
+                b"A <a@invalid> 3 +0000",
+                b"C <c@invalid> 3 +0000",
+                None,
+                b"child",
+            );
+            let metadata = native
+                .path()
+                .join(if shallow { "shallow" } else { "info/grafts" });
+            fs::create_dir_all(metadata.parent().unwrap()).unwrap();
+            let contents = if shallow {
+                format!("{child}\n")
+            } else {
+                format!("{child} {second} {first}\n")
+            };
+            drop(native);
+            fs::write(&metadata, contents.as_bytes()).unwrap();
+            let traversal = git2::Repository::open(&path).unwrap();
+            let observed = traversal
+                .find_commit(child)
+                .unwrap()
+                .parent_ids()
+                .collect::<Vec<_>>();
+            assert_eq!(observed, if shallow { vec![] } else { vec![second, first] });
+            let record = Repository::open_exact(&path)
+                .unwrap()
+                .read_commit(ObjectId::parse_hex(format, &child.to_string()).unwrap())
+                .unwrap();
+            assert_eq!(record.tree.to_string(), tree.to_string());
+            assert_eq!(
+                record
+                    .parents
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>(),
+                vec![first.to_string(), second.to_string()]
+            );
+            assert_eq!(fs::read(&metadata).unwrap(), contents.as_bytes());
+        }
+    }
+}
+
+#[test]
+fn malformed_grafts_preserve_the_native_error_class() {
+    let temp = temp_dir("native-bad-grafts");
+    let path = temp.path().join("repo");
+    let native = init_repo(&path, ObjectFormat::Sha1);
+    let metadata = native.path().join("info/grafts");
+    fs::create_dir_all(metadata.parent().unwrap()).unwrap();
+    drop(native);
+    fs::write(&metadata, b"invalid\n").unwrap();
+    let error = Repository::open_exact(&path)
+        .err()
+        .expect("malformed graft rejected");
+    assert_eq!(error.kind(), ErrorKind::RepositoryOpen);
+    let diagnostic = error.native().unwrap();
+    // libgit2 1.9.7 include/git2/errors.h: GIT_ERROR_GRAFTS = 36.
+    assert_eq!(diagnostic.class, 36);
+    assert_eq!(diagnostic.code, -1);
+    assert!(!diagnostic.message.is_empty());
+    assert_eq!(fs::read(metadata).unwrap(), b"invalid\n");
+}
