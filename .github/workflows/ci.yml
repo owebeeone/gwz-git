@@ -1,0 +1,53 @@
+name: CI
+
+permissions:
+  contents: read
+
+# Step 5.1b (GwzTransportReleaseConvergencePlan): gwz-git had no test workflow,
+# only the crates.io bootstrap one. Native commit and tag move here in step 5.2
+# with G1's platform gates (hooks, includeIf, autocrlf, system config,
+# PROGRAMDATA, the spawn-gate exclusion), which no gwz-core parity-inventory root
+# covers once they leave it, so the Windows leg is the first one: the crate's
+# own fmt, clippy and test run on Windows. No Linux or macOS leg exists yet: this
+# step adds none, and step 5.2 adds the ones its gates need.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  windows:
+    name: Build and test on Windows
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        # Every step runs under bash: the default PowerShell fails a multi-line
+        # step only on its last command's exit status.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check out git2-rs beside gwz-git
+        # gwz-git builds against the git2-rs fork by path (`../git2-rs`, package
+        # `gwz-git2`), at the commit .github/git2-rs.commit pins.
+        run: bash .github/checkout-git2-rs.sh
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+          rustc --version
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Format, lint and test
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked --no-fail-fast

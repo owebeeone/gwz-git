@@ -12,8 +12,13 @@ fn init_repo(path: &Path) {
 }
 
 fn temp_dir(prefix: &str) -> TempDir {
+    // GWZ_GIT_TEST_TMP names the scratch root when the default D:/gwz-tests
+    // is not the place a run may write (a shared Windows host's lock rules).
+    let override_root = std::env::var_os("GWZ_GIT_TEST_TMP");
     if cfg!(windows) {
-        let root = Path::new("D:/gwz-tests");
+        let root = override_root
+            .as_deref()
+            .map_or(Path::new("D:/gwz-tests"), Path::new);
         fs::create_dir_all(root).unwrap();
         tempfile::Builder::new()
             .prefix(prefix)
@@ -122,7 +127,7 @@ fn exact_open_handles_normal_bare_unborn_and_rejects_parent_discovery() {
         Ok(_) => panic!("nested path unexpectedly discovered a repository"),
         Err(error) => error,
     };
-    assert_eq!(error.kind(), ErrorKind::RepositoryOpen);
+    assert_eq!(error.kind(), ErrorKind::NotARepository);
     assert!(Repository::open_exact(&temp.path().join("missing")).is_err());
     let mismatch = Repository::open_exact(&normal)
         .unwrap()
@@ -177,7 +182,7 @@ fn native_open_error_owns_diagnostics_after_native_handle_lifetime_ends() {
         .native()
         .map(|native| (native.code, native.class, native.message.clone()));
     drop(error);
-    assert_eq!(kind, ErrorKind::RepositoryOpen);
+    assert_eq!(kind, ErrorKind::NotARepository);
     let (code, class, message) = diagnostic.expect("native open error diagnostics");
     assert_ne!(code, 0);
     assert_ne!(class, 0);

@@ -28,8 +28,13 @@ fn init_repo(path: &Path, format: ObjectFormat) -> git2::Repository {
 }
 
 fn temp_dir(prefix: &str) -> TempDir {
+    // GWZ_GIT_TEST_TMP names the scratch root when the default D:/gwz-tests
+    // is not the place a run may write (a shared Windows host's lock rules).
+    let override_root = std::env::var_os("GWZ_GIT_TEST_TMP");
     if cfg!(windows) {
-        let root = Path::new("D:/gwz-tests");
+        let root = override_root
+            .as_deref()
+            .map_or(Path::new("D:/gwz-tests"), Path::new);
         std::fs::create_dir_all(root).unwrap();
         tempfile::Builder::new()
             .prefix(prefix)
@@ -232,7 +237,10 @@ fn missing_references_are_returned_but_wrong_objects_and_malformed_commits_fail(
         assert_eq!(error.kind(), ErrorKind::ObjectRead);
         let diagnostic = error.native().expect("native lookup failure retained");
         assert_eq!(diagnostic.code, expected.raw_code());
-        assert_eq!(diagnostic.class, expected.raw_class() as i32);
+        // raw_class() is unsigned on Unix and i32 on Windows.
+        #[allow(clippy::unnecessary_cast)]
+        let expected_class = expected.raw_class() as i32;
+        assert_eq!(diagnostic.class, expected_class);
         assert_eq!(diagnostic.message, expected.message());
     }
 

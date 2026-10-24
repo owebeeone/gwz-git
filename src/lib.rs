@@ -15,6 +15,8 @@
 //! `Repository` owns one native handle and may move between workers, but it is
 //! deliberately neither cloneable nor shareable. The G0 surface performs no
 //! process, network, environment, cwd, ref, index, or worktree mutation.
+//! [`Repository::open_from_env`] is the one open that lets the native layer
+//! read Git's variables from the process environment; it still changes none.
 //!
 //! ```rust,compile_fail
 //! fn requires_sync<T: Sync>() {}

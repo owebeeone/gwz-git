@@ -6,6 +6,7 @@ pub enum ErrorKind {
     InvalidObjectId,
     ObjectFormatMismatch,
     RepositoryOpen,
+    NotARepository,
     ObjectRead,
 }
 
@@ -48,10 +49,25 @@ impl Error {
         Self::plain(ErrorKind::ObjectFormatMismatch, message)
     }
 
+    /// A failed open: libgit2's "not found" means the path is not a
+    /// repository, which callers ask apart from the other open failures.
+    pub(crate) fn from_open(error: git2::Error) -> Self {
+        let kind = if error.code() == git2::ErrorCode::NotFound {
+            ErrorKind::NotARepository
+        } else {
+            ErrorKind::RepositoryOpen
+        };
+        Self::from_native(kind, error)
+    }
+
     pub(crate) fn from_native(kind: ErrorKind, error: git2::Error) -> Self {
+        // raw_class() is unsigned on Unix and i32 on Windows: the cast is
+        // needed on one platform and a no-op on the other.
+        #[allow(clippy::unnecessary_cast)]
+        let class = error.raw_class() as i32;
         let diagnostic = NativeDiagnostic {
             code: error.raw_code(),
-            class: error.raw_class() as i32,
+            class,
             message: error.message().to_owned(),
         };
         Self {

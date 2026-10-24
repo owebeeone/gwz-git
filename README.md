@@ -22,11 +22,22 @@ fn inspect(path: &std::path::Path, full_id: &str) -> Result<(), gwz_git::Error> 
 }
 ```
 
+Step 5.1b adds `Repository::open_from_env` (an open that lets Git's environment
+variables shape the handle), `Repository::resolve` (a revision to an id) and
+`ErrorKind::NotARepository`; the guide below carries the amendment.
+
 The [API guide](../gwz-core/dev-docs/GwzGitLibraryApi.md) specifies exact opening,
 ID formats, record fields, errors and lifetimes. Drop releases the native handle;
 returned commit records remain usable. Paths may identify a worktree root, Git
 directory or bare root. Nested paths do not search parents. Reads do not lock
 against other processes or provide a multi-read snapshot.
+
+`scripts/process_globals_allowlist.json` is the crate's spawn and process-global
+allowlist (empty: gwz-git spawns nothing). Check it with gwz-core's checker:
+`python3.13 -B ../gwz-core/scripts/checks/check_process_globals.py --repo . --allowlist scripts/process_globals_allowlist.json`.
+`.github/workflows/ci.yml` runs fmt, clippy and the tests on Windows. A Windows
+host that must not use `D:/gwz-tests` sets `GWZ_GIT_TEST_TMP` (and `TEMP`) to a
+scratch directory.
 
 From this prepared workspace, format and test with the locked Rust 1.95
 toolchain and isolated target directory:
