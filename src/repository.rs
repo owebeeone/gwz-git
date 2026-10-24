@@ -6,7 +6,7 @@ use crate::error::{Error, ErrorKind};
 use crate::object_id::{ObjectFormat, ObjectId};
 
 pub struct Repository {
-    native: git2::Repository,
+    pub(crate) native: git2::Repository,
 }
 
 impl Repository {
@@ -91,6 +91,12 @@ impl Repository {
     }
 
     pub fn read_commit(&self, id: ObjectId) -> Result<CommitRecord, Error> {
+        self.require_format(id)?;
+        commit::read(&self.native, id)
+    }
+
+    /// Fails before any native lookup when `id` is of the other object format.
+    pub(crate) fn require_format(&self, id: ObjectId) -> Result<(), Error> {
         if id.format() != self.object_format() {
             return Err(Error::format_mismatch(format!(
                 "object id format {:?} does not match repository format {:?}",
@@ -98,6 +104,6 @@ impl Repository {
                 self.object_format()
             )));
         }
-        commit::read(&self.native, id)
+        Ok(())
     }
 }

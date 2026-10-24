@@ -26,6 +26,12 @@ Step 5.1b adds `Repository::open_from_env` (an open that lets Git's environment
 variables shape the handle), `Repository::resolve` (a revision to an id) and
 `ErrorKind::NotARepository`; the guide below carries the amendment.
 
+Step 5.3 adds the refs and reads gwz-core used to do itself: `Repository::head`,
+`tag_names`, `commit_exists`, `blob_at`, `is_ancestor`, `ahead_behind`,
+`merge_base`, `changed_paths`, `status` and `remotes`, with the owned records
+`Head`, `AheadBehind`, `Status`, `FileStatus`, `StatusOptions` and `Remote`
+(guide section A3).
+
 The [API guide](../gwz-core/dev-docs/GwzGitLibraryApi.md) specifies exact opening,
 ID formats, record fields, errors and lifetimes. Drop releases the native handle;
 returned commit records remain usable. Paths may identify a worktree root, Git

@@ -11,6 +11,14 @@ pub enum ErrorKind {
     /// A commit or tag operation was refused or failed: the message says why,
     /// and native diagnostics are present when libgit2 reported the failure.
     Operation,
+    /// A path argument is not a normalized repository-relative path (it is
+    /// absolute, empty, or has a `.`, `..` or root component). No native call
+    /// was made.
+    InvalidPath,
+    /// Reading repository state that is neither an object nor a reference
+    /// failed: the status of the worktree, the configured remotes, or the
+    /// `HEAD` file of an unborn branch.
+    StateRead,
 }
 
 #[derive(Debug)]
@@ -53,6 +61,31 @@ impl Error {
 
     pub(crate) fn invalid_id(message: impl Into<String>) -> Self {
         Self::plain(ErrorKind::InvalidObjectId, message)
+    }
+
+    pub(crate) fn invalid_path(message: impl Into<String>) -> Self {
+        Self::plain(ErrorKind::InvalidPath, message)
+    }
+
+    /// A state read that failed for a reason this crate found.
+    pub(crate) fn state_read(message: impl Into<String>) -> Self {
+        Self::plain(ErrorKind::StateRead, message)
+    }
+
+    /// A reference, revision, object or tree read that libgit2 failed.
+    pub(crate) fn object_read(error: git2::Error) -> Self {
+        Self::from_native(ErrorKind::ObjectRead, error)
+    }
+
+    /// A status or configuration read that libgit2 failed.
+    pub(crate) fn state_read_native(error: git2::Error) -> Self {
+        Self::from_native(ErrorKind::StateRead, error)
+    }
+
+    /// A plain description of an object read this crate refused (a path that
+    /// names a directory where a file was asked for).
+    pub(crate) fn object_read_plain(message: impl Into<String>) -> Self {
+        Self::plain(ErrorKind::ObjectRead, message)
     }
 
     pub(crate) fn format_mismatch(message: impl Into<String>) -> Self {

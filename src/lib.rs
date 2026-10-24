@@ -1,6 +1,7 @@
 //! Single-repository Git behavior for GWZ: read-only foundations (open, ids,
-//! commit records, revision resolve) and, since step 5.2, native commit and tag
-//! in [`native_commit`].
+//! commit records, revision resolve), since step 5.2 native commit and tag in
+//! [`native_commit`], and since step 5.3 the refs and reads of a repository
+//! (`head`, `status`, tag names, the commit graph, committed files, remotes).
 //!
 //! ```rust,no_run
 //! use gwz_git::{ObjectId, Repository};
@@ -56,11 +57,20 @@
 
 mod commit;
 mod error;
+mod graph;
 pub mod native_commit;
 mod object_id;
+mod objects;
+mod refs;
+mod remotes;
 mod repository;
+mod status;
 
 pub use commit::{CommitRecord, Signature};
 pub use error::{Error, ErrorKind, NativeDiagnostic};
+pub use graph::AheadBehind;
 pub use object_id::{ObjectFormat, ObjectId};
+pub use refs::Head;
+pub use remotes::Remote;
 pub use repository::Repository;
+pub use status::{FileStatus, Status, StatusOptions};
