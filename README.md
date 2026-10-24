@@ -32,6 +32,9 @@ Step 5.3 adds the refs and reads gwz-core used to do itself: `Repository::head`,
 `Head`, `AheadBehind`, `Status`, `FileStatus`, `StatusOptions` and `Remote`
 (guide section A3).
 
+Step 5.5 adds `Repository::index_snapshot` with the owned records `IndexSnapshot` and `IndexEntry` (the index as gwz-core's
+`repository_index` read it; guide section A3).
+
 The [API guide](../gwz-core/dev-docs/GwzGitLibraryApi.md) specifies exact opening,
 ID formats, record fields, errors and lifetimes. Drop releases the native handle;
 returned commit records remain usable. Paths may identify a worktree root, Git
