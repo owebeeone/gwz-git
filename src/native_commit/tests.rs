@@ -28,3 +28,4 @@ mod notes;
 mod route_commit;
 mod route_config;
 mod route_tag;
+mod verify;

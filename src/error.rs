@@ -113,6 +113,20 @@ impl Error {
         Self::from_native(ErrorKind::Operation, error)
     }
 
+    /// A verification read that failed after the write it checks: an
+    /// `Operation` error whose text says the write happened. The native
+    /// diagnostics of the failed read are kept.
+    pub(crate) fn written_but_unverified(what: &str, error: Error) -> Self {
+        Self {
+            kind: ErrorKind::Operation,
+            message: format!(
+                "{what}: written; verification read failed: {}",
+                error.message
+            ),
+            native: error.native,
+        }
+    }
+
     pub(crate) fn from_native(kind: ErrorKind, error: git2::Error) -> Self {
         // raw_class() is unsigned on Unix and i32 on Windows: the cast is
         // needed on one platform and a no-op on the other.

@@ -5,7 +5,6 @@
 //! why the CLI was chosen. The checks read; none of them changes the
 //! repository.
 
-use std::ffi::OsStr;
 use std::path::Path;
 
 use super::config_view::{ConfigView, Flag};
@@ -15,6 +14,7 @@ use super::ident::{self, Ident, IdentRefusal, Role};
 use super::message::{self, Cleanup};
 use super::staging::{Staging, index_check, staging_plan};
 use super::system_config;
+use crate::repository::Repository;
 
 /// Why the Git CLI is used.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -78,14 +78,12 @@ pub(super) struct TagPlan {
 }
 
 /// Open the repository the way native uses it: no parent search, and the
-/// configuration locations Git's own variables name.
+/// configuration locations Git's own variables name. This is
+/// [`Repository::open_from_env`], the one environment-honouring open.
 pub(super) fn open(path: &Path) -> Result<git2::Repository, CliReason> {
-    git2::Repository::open_ext(
-        path,
-        git2::RepositoryOpenFlags::NO_SEARCH | git2::RepositoryOpenFlags::FROM_ENV,
-        &[] as &[&OsStr],
-    )
-    .map_err(|_| CliReason::CannotOpen)
+    Repository::open_from_env(path)
+        .map(Repository::into_native)
+        .map_err(|_| CliReason::CannotOpen)
 }
 
 fn exists(path: &Path) -> bool {

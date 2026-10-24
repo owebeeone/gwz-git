@@ -47,8 +47,10 @@ cfg_if::cfg_if! {
     }
 }
 
-/// Which route may be taken. The default is the route rule; a caller or a
-/// test can force the Git CLI to compare it with the native route.
+/// Which route may be taken. The default is the route rule. Forcing the Git
+/// CLI to compare it with the native route is a test facility: it exists only
+/// under the `test-support` feature (and in this crate's own tests), so a
+/// production consumer cannot force a route.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct RoutePolicy {
     cli_only: bool,
@@ -61,11 +63,26 @@ impl RoutePolicy {
         cli_only: false,
         native_all: false,
     };
-    /// Always the Git CLI.
-    pub const CLI_ONLY: Self = Self {
-        cli_only: true,
-        native_all: false,
-    };
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(any(test, feature = "test-support"))] {
+        impl RoutePolicy {
+            /// Always the Git CLI.
+            pub const CLI_ONLY: Self = Self {
+                cli_only: true,
+                native_all: false,
+            };
+        }
+
+        impl Services<'_> {
+            /// A copy of these services under another route policy.
+            pub fn with_policy(mut self, policy: RoutePolicy) -> Self {
+                self.policy = policy;
+                self
+            }
+        }
+    }
 }
 
 /// The runner of the Git CLI route's child processes. The caller owns the
@@ -83,8 +100,9 @@ pub trait ProcessGate {
 pub struct Services<'a> {
     /// The captured `GIT_*` variables, `EMAIL`, `PATH` and `PROGRAMDATA`.
     pub environment: &'a GitEnvironment,
-    /// The route policy; [`RoutePolicy::AUTO`] unless a caller says otherwise.
-    pub policy: RoutePolicy,
+    /// The route policy; [`RoutePolicy::AUTO`] unless the `test-support`
+    /// feature (or this crate's tests) says otherwise.
+    pub(crate) policy: RoutePolicy,
     /// Where the "why Git ran" lines go, if the caller has a reader.
     pub notes: Option<&'a RouteNotes>,
     /// How the Git CLI route's child is launched.
@@ -99,11 +117,6 @@ impl<'a> Services<'a> {
             notes: None,
             process,
         }
-    }
-
-    pub fn with_policy(mut self, policy: RoutePolicy) -> Self {
-        self.policy = policy;
-        self
     }
 
     pub fn with_notes(mut self, notes: Option<&'a RouteNotes>) -> Self {
@@ -244,7 +257,7 @@ pub fn commit(
     };
     let oid = exec::commit(&repo, plan)?;
     // AD1 self-verify: HEAD is the new commit (read fresh).
-    let after = verify::head(path)?;
+    let after = verify::head_after(path, "commit")?;
     let id = ObjectId::from_git2(oid);
     if after != Some(id) {
         return Err(Error::operation("HEAD is not the new commit after commit"));

@@ -32,6 +32,12 @@ impl Repository {
         )
     }
 
+    /// The native handle, for the modules of this crate that plan a change
+    /// over libgit2 (native commit and tag).
+    pub(crate) fn into_native(self) -> git2::Repository {
+        self.native
+    }
+
     fn open_with(path: &Path, flags: git2::RepositoryOpenFlags) -> Result<Self, Error> {
         let native =
             git2::Repository::open_ext(path, flags, &[] as &[&OsStr]).map_err(Error::from_open)?;

@@ -4,12 +4,15 @@ permissions:
   contents: read
 
 # Step 5.1b (GwzTransportReleaseConvergencePlan): gwz-git had no test workflow,
-# only the crates.io bootstrap one. Native commit and tag move here in step 5.2
+# only the crates.io bootstrap one. Native commit and tag moved here in step 5.2
 # with G1's platform gates (hooks, includeIf, autocrlf, system config,
-# PROGRAMDATA, the spawn-gate exclusion), which no gwz-core parity-inventory root
-# covers once they leave it, so the Windows leg is the first one: the crate's
-# own fmt, clippy and test run on Windows. No Linux or macOS leg exists yet: this
-# step adds none, and step 5.2 adds the ones its gates need.
+# PROGRAMDATA, the spawn-gate exclusion), and the refs and reads in step 5.3.
+# Those tests used to run on Linux and macOS in gwz-core's platform-matrix and no
+# gwz-core workflow runs gwz-git's own `cargo test`, so this workflow runs the
+# crate alone (the LBT rule: it builds and tests by itself) on every platform the
+# move took them from: Windows, Linux (arm64, `Host::Unix`'s system-config
+# conventions, the Unix-only hook and signer tests) and macOS (round 1
+# remediation C-P2-2).
 on:
   pull_request:
   push:
@@ -20,6 +23,41 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  unix:
+    name: Build and test on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04-arm
+            name: Linux
+          - os: macos-14
+            name: macOS
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check out git2-rs beside gwz-git
+        # gwz-git builds against the git2-rs fork by path (`../git2-rs`, package
+        # `gwz-git2`), at the commit .github/git2-rs.commit pins.
+        run: bash .github/checkout-git2-rs.sh
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+          rustc --version
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Format, lint and test
+        run: |
+          git --version
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked --no-fail-fast
   windows:
     name: Build and test on Windows
     runs-on: windows-2022

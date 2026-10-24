@@ -10,6 +10,13 @@ description = "Single-repository Git behavior for GWZ"
 
 [workspace]
 
+[features]
+default = []
+# Test facilities that production consumers must not have: `RoutePolicy::CLI_ONLY` and
+# `Services::with_policy` (force the Git CLI route to compare it with the native one).
+# gwz-core enables it in [dev-dependencies] only.
+test-support = []
+
 [dependencies]
 cfg-if = "1"
 git2 = { package = "gwz-git2", path = "../git2-rs", version = "=0.21.0", default-features = false, features = ["unstable-sha256", "vendored-libgit2"] }

@@ -23,6 +23,7 @@
 //! through a caller-supplied [`native_commit::ProcessGate`].
 //! [`Repository::open_from_env`] is the one open that lets the native layer
 //! read Git's variables from the process environment; it still changes none.
+//! `native_commit` opens through it; gwz-core has no caller of its own.
 //!
 //! ```rust,compile_fail
 //! fn requires_sync<T: Sync>() {}

@@ -55,6 +55,30 @@ impl Repository {
         })
     }
 
+    /// Whether the reference `refs/tags/{name}` exists. An exact reference
+    /// lookup: no revision rules (a `git describe`-shaped name, a branch that
+    /// shares the name) can stand in for the tag.
+    pub(crate) fn tag_ref_exists(&self, name: &str) -> Result<bool, Error> {
+        match self.native.find_reference(&format!("refs/tags/{name}")) {
+            Ok(_) => Ok(true),
+            Err(error) if error.code() == git2::ErrorCode::NotFound => Ok(false),
+            Err(error) => Err(Error::object_read(error)),
+        }
+    }
+
+    /// The commit the tag `name` peels to, by exact reference lookup;
+    /// `Ok(None)` when `refs/tags/{name}` does not exist.
+    pub(crate) fn tag_commit(&self, name: &str) -> Result<Option<ObjectId>, Error> {
+        match self.native.find_reference(&format!("refs/tags/{name}")) {
+            Ok(reference) => {
+                let commit = reference.peel_to_commit().map_err(Error::object_read)?;
+                Ok(Some(ObjectId::from_git2(commit.id())))
+            }
+            Err(error) if error.code() == git2::ErrorCode::NotFound => Ok(None),
+            Err(error) => Err(Error::object_read(error)),
+        }
+    }
+
     /// The names of every tag (`v1`, not `refs/tags/v1`), sorted.
     pub fn tag_names(&self) -> Result<Vec<String>, Error> {
         let names = self.native.tag_names(None).map_err(Error::object_read)?;

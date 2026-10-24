@@ -44,8 +44,8 @@ pub(super) fn commit(
     command.arg("-m").arg(message);
     run(services, &mut command, "git commit")?;
     // AD1 self-verify: HEAD advanced to a new commit (read fresh).
-    let after: ObjectId =
-        verify::head(path)?.ok_or_else(|| Error::operation("HEAD is unborn after commit"))?;
+    let after: ObjectId = verify::head_after(path, "git commit")?
+        .ok_or_else(|| Error::operation("HEAD is unborn after commit"))?;
     if Some(after) == before {
         return Err(Error::operation("git commit did not advance HEAD"));
     }
