@@ -5,7 +5,7 @@ connected to the production core or CLI. G0 opens an
 explicit local repository with the qualified `git2-rs`/libgit2 1.9.7 source and
 reads one full-ID commit into owned records.
 
-The foundation performs no Git executable lookup, subprocess, network access,
+The G0 read foundation performs no Git executable lookup, subprocess, network access,
 credential prompt, lazy fetch, ref/index/worktree mutation, current-directory
 change, or process-environment mutation. `Repository` owns one native handle;
 move it between workers for sequential use and do not share it concurrently.
@@ -64,8 +64,9 @@ python3 tests/transport_native/prove.py --git2-source ../git2-rs
 ```
 
 The dependency source, nested native checkout, lockfile, and production
-activation require the separate integrator qualification gates. G0 does not implement commit,
-tag, history, fetch, hook, signer, or generic process-runner APIs. Later
-commit/tag work may run configured hook and signer helper programs, but it must
-never use a Git executable fallback. Remove the isolated build output when it is
+activation require the separate integrator qualification gates. Since step 5.2 the
+crate also holds native commit and tag (`gwz_git::native_commit`, moved from
+gwz-core): libgit2 when nothing needs the Git CLI, the CLI otherwise, launched
+through the caller's `ProcessGate`; see the API guide's section A2. History,
+fetch and a generic process-runner API are not provided. Remove the isolated build output when it is
 no longer needed with `rm -rf /tmp/gwz-git-g0-target`.

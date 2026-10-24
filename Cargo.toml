@@ -11,7 +11,12 @@ description = "Single-repository Git behavior for GWZ"
 [workspace]
 
 [dependencies]
+cfg-if = "1"
 git2 = { package = "gwz-git2", path = "../git2-rs", version = "=0.21.0", default-features = false, features = ["unstable-sha256", "vendored-libgit2"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+[target.'cfg(windows)'.dev-dependencies]
+# native_commit's Windows-only test spells a path by its short names (GetShortPathNameW).
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }

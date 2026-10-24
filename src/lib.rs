@@ -1,4 +1,6 @@
-//! Read-only, single-repository Git foundations for GWZ.
+//! Single-repository Git behavior for GWZ: read-only foundations (open, ids,
+//! commit records, revision resolve) and, since step 5.2, native commit and tag
+//! in [`native_commit`].
 //!
 //! ```rust,no_run
 //! use gwz_git::{ObjectId, Repository};
@@ -13,8 +15,10 @@
 //! ```
 //!
 //! `Repository` owns one native handle and may move between workers, but it is
-//! deliberately neither cloneable nor shareable. The G0 surface performs no
-//! process, network, environment, cwd, ref, index, or worktree mutation.
+//! deliberately neither cloneable nor shareable. The G0 read surface performs no
+//! process, network, environment, cwd, ref, index, or worktree mutation; the
+//! `native_commit` calls change refs and the index, and may launch the Git CLI
+//! through a caller-supplied [`native_commit::ProcessGate`].
 //! [`Repository::open_from_env`] is the one open that lets the native layer
 //! read Git's variables from the process environment; it still changes none.
 //!
@@ -52,6 +56,7 @@
 
 mod commit;
 mod error;
+pub mod native_commit;
 mod object_id;
 mod repository;
 

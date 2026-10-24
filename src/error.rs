@@ -8,6 +8,9 @@ pub enum ErrorKind {
     RepositoryOpen,
     NotARepository,
     ObjectRead,
+    /// A commit or tag operation was refused or failed: the message says why,
+    /// and native diagnostics are present when libgit2 reported the failure.
+    Operation,
 }
 
 #[derive(Debug)]
@@ -65,6 +68,16 @@ impl Error {
             ErrorKind::RepositoryOpen
         };
         Self::from_native(kind, error)
+    }
+
+    /// A commit or tag operation that failed for a reason this crate found.
+    pub(crate) fn operation(message: impl Into<String>) -> Self {
+        Self::plain(ErrorKind::Operation, message)
+    }
+
+    /// A commit or tag operation that libgit2 failed.
+    pub(crate) fn operation_native(error: git2::Error) -> Self {
+        Self::from_native(ErrorKind::Operation, error)
     }
 
     pub(crate) fn from_native(kind: ErrorKind, error: git2::Error) -> Self {

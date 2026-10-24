@@ -63,8 +63,10 @@ dependencies = [
 name = "gwz-git"
 version = "0.1.0"
 dependencies = [
+ "cfg-if",
  "gwz-git2",
  "tempfile",
+ "windows-sys",
 ]
 
 [[package]]
