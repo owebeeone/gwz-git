@@ -263,3 +263,49 @@ fn a_plain_directory_is_not_a_repository_and_other_open_failures_stay_open_error
         assert!(error.native().is_some());
     }
 }
+
+#[test]
+fn is_repository_answers_yes_no_and_leaves_real_failures_as_errors() {
+    let temp = TempDir::new().unwrap();
+    let repo = temp.path().join("repo");
+    init_repo(&repo, ObjectFormat::Sha1);
+    let bare = temp.path().join("bare");
+    git2::Repository::init_bare(&bare).unwrap();
+    let plain = temp.path().join("plain");
+    fs::create_dir(&plain).unwrap();
+    let nested = repo.join("nested");
+    fs::create_dir(&nested).unwrap();
+
+    assert!(Repository::is_repository(&repo).unwrap());
+    assert!(Repository::is_repository(&repo.join(".git")).unwrap());
+    assert!(Repository::is_repository(&bare).unwrap());
+    // No parent search: a directory inside a repository is not one.
+    for no in [&plain, &nested, &temp.path().join("missing")] {
+        assert!(!Repository::is_repository(no).unwrap(), "{no:?}");
+    }
+    // A repository that is found and cannot be opened is an error, not "no".
+    let broken = temp.path().join("broken");
+    init_repo(&broken, ObjectFormat::Sha1);
+    let config = broken.join(".git").join("config");
+    let mut text = fs::read_to_string(&config).unwrap();
+    text = text.replace("repositoryformatversion = 0", "repositoryformatversion = 1");
+    text.push_str("[extensions]\n\tgwzunknownextension = true\n");
+    fs::write(&config, text).unwrap();
+    let error = Repository::is_repository(&broken).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::RepositoryOpen);
+}
+
+#[test]
+fn error_message_is_the_diagnostic_text_without_the_kind_prefix() {
+    let temp = TempDir::new().unwrap();
+    let native = Repository::open_exact(&temp.path().join("missing"))
+        .err()
+        .unwrap();
+    let diagnostic = native.native().unwrap().message.clone();
+    assert_eq!(native.message(), diagnostic);
+    assert!(native.to_string().ends_with(&diagnostic));
+    // A plain error has a message too.
+    let plain = ObjectId::parse_hex(ObjectFormat::Sha1, "zz").unwrap_err();
+    assert!(!plain.message().is_empty());
+    assert!(plain.native().is_none());
+}

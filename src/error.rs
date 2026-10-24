@@ -29,6 +29,13 @@ impl Error {
         self.kind
     }
 
+    /// The diagnostic text alone: the native message when libgit2 reported
+    /// one, else the description of a failure this crate found itself. It has
+    /// no kind prefix, unlike `Display`, and is not a stable match key.
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
     pub fn native(&self) -> Option<&NativeDiagnostic> {
         self.native.as_ref()
     }

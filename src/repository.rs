@@ -59,6 +59,18 @@ impl Repository {
         }
     }
 
+    /// Whether `path` is a repository, opened as [`Repository::open_exact`]
+    /// does (no parent search). A path that is not one, including a missing
+    /// path, answers `Ok(false)`; a repository that is found and cannot be
+    /// opened is an error.
+    pub fn is_repository(path: &Path) -> Result<bool, Error> {
+        match Self::open_exact(path) {
+            Ok(_) => Ok(true),
+            Err(error) if error.kind() == ErrorKind::NotARepository => Ok(false),
+            Err(error) => Err(error),
+        }
+    }
+
     pub fn git_dir(&self) -> &Path {
         self.native.path()
     }
